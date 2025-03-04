@@ -1,18 +1,31 @@
+// client/src/components/ChatsPanel/ChatsList.js
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { getAllChats } from '../../services/chatService';
+import { getAllChats, getIndividualChats, getGroupsOnly } from '../../services/chatService';
 
-const ChatsList = ({ onChatSelect }) => {
+const ChatsList = ({ onChatSelect, showGroupsOnly = false, showChatsOnly = false }) => {
     const [chats, setChats] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
-        const fetchChats = async () => {
+        const fetchData = async () => {
             try {
                 setLoading(true);
-                const data = await getAllChats();
+
+                let data;
+                if (showGroupsOnly) {
+                    // Fetch only groups
+                    data = await getGroupsOnly();
+                } else if (showChatsOnly) {
+                    // Fetch only individual chats
+                    data = await getIndividualChats();
+                } else {
+                    // Fetch all (both chats and groups)
+                    data = await getAllChats();
+                }
+
                 setChats(data);
                 setError(null);
             } catch (err) {
@@ -23,21 +36,25 @@ const ChatsList = ({ onChatSelect }) => {
             }
         };
 
-        fetchChats();
-    }, []);
+        fetchData();
+    }, [showGroupsOnly, showChatsOnly]);
 
     const filteredChats = chats.filter(chat =>
         chat.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    const headerText = showGroupsOnly
+        ? "Groups"
+        : (showChatsOnly ? "Individual Chats" : "Chats & Groups");
+
     return (
         <div className="bg-white rounded-lg shadow">
             <div className="p-4 border-b">
-                <h2 className="text-xl font-semibold">Chats & Groups</h2>
+                <h2 className="text-xl font-semibold">{headerText}</h2>
                 <div className="mt-2">
                     <input
                         type="text"
-                        placeholder="Search chats..."
+                        placeholder={`Search ${headerText.toLowerCase()}...`}
                         className="w-full p-2 border rounded"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -46,7 +63,7 @@ const ChatsList = ({ onChatSelect }) => {
             </div>
 
             {loading ? (
-                <div className="p-4 text-center">Loading chats...</div>
+                <div className="p-4 text-center">Loading...</div>
             ) : error ? (
                 <div className="p-4 text-center text-red-500">{error}</div>
             ) : (
@@ -82,7 +99,9 @@ const ChatsList = ({ onChatSelect }) => {
                         ))
                     ) : (
                         <div className="p-4 text-center text-gray-500">
-                            No chats found matching "{searchTerm}"
+                            {searchTerm
+                                ? `No ${headerText.toLowerCase()} found matching "${searchTerm}"`
+                                : `No ${headerText.toLowerCase()} available`}
                         </div>
                     )}
                 </div>

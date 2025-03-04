@@ -1,11 +1,35 @@
+// client/src/services/chatService.js
 import api from './api';
 
+// Get all chats and groups combined
 export const getAllChats = async () => {
     try {
         const response = await api.get('/chats');
         return response.data;
     } catch (error) {
         console.error('Error fetching chats:', error);
+        throw error;
+    }
+};
+
+// Get individual chats only (no groups)
+export const getIndividualChats = async () => {
+    try {
+        const response = await api.get('/chats/individual');
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching individual chats:', error);
+        throw error;
+    }
+};
+
+// Get groups only
+export const getGroupsOnly = async () => {
+    try {
+        const response = await api.get('/chats/groups');
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching groups:', error);
         throw error;
     }
 };
