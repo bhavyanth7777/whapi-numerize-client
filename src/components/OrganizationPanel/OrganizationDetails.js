@@ -29,13 +29,9 @@ const OrganizationDetails = ({ organization, onBack, onUpdate }) => {
 
     const fetchData = async () => {
         try {
-            setLoading(true);
-
             // Get organization details
             const orgData = await getOrganizationById(organization._id);
             setOrg(orgData);
-            setName(orgData.name);
-            setDescription(orgData.description || '');
 
             // Get all chats and groups
             const [individualChats, groups] = await Promise.all([
@@ -43,32 +39,24 @@ const OrganizationDetails = ({ organization, onBack, onUpdate }) => {
                 getGroupsOnly()
             ]);
 
-            // Add type indicator to differentiate between chats and groups
-            const formattedChats = individualChats.map(chat => ({
-                ...chat,
-                type: 'chat'
-            }));
-            const formattedGroups = groups.map(group => ({
-                ...group,
-                type: 'group'
-            }));
+            // Combine and add type indicator
+            const allChats = [
+                ...individualChats.map(chat => ({ ...chat, type: 'chat' })),
+                ...groups.map(group => ({ ...group, type: 'group' }))
+            ];
 
-            // Combine all chats and groups
-            const allChats = [...formattedChats, ...formattedGroups];
-
-            // Filter out chats that are already assigned to this organization
-            const orgChatIds = orgData.chats.map(chat => chat.chatId);
-
-            // Find assigned chats with full details
-            const assigned = allChats.filter(chat => orgChatIds.includes(chat.chatId));
+            // Find assigned chats using chatIds array
+            const assigned = allChats.filter(chat =>
+                orgData.chatIds && orgData.chatIds.includes(chat.chatId)
+            );
 
             // Find available chats (not assigned to this org)
-            const available = allChats.filter(chat => !orgChatIds.includes(chat.chatId));
+            const available = allChats.filter(chat =>
+                !orgData.chatIds || !orgData.chatIds.includes(chat.chatId)
+            );
 
             setAssignedChats(assigned);
             setAvailableChats(available);
-
-            setError(null);
         } catch (err) {
             setError('Failed to load organization details. Please try again.');
             console.error('Error fetching organization details:', err);

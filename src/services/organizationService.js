@@ -41,6 +41,7 @@ export const updateOrganization = async (id, organizationData) => {
 };
 
 export const deleteOrganization = async (id) => {
+    console.log('CLIENT Organization Service')
     try {
         const response = await api.delete(`/organizations/${id}`);
         return response.data;
@@ -51,8 +52,17 @@ export const deleteOrganization = async (id) => {
 };
 
 export const addChatToOrganization = async (organizationId, chatId) => {
+    console.log('Making request to add chat', chatId, 'to organization', organizationId);
+
     try {
-        const response = await api.post(`/organizations/${organizationId}/chats/${chatId}`);
+        // Encode the chatId to handle special characters
+        const encodedChatId = encodeURIComponent(chatId);
+        console.log('Encoded chatId:', encodedChatId);
+
+        const url = `/organizations/${organizationId}/chats/${encodedChatId}`;
+        console.log('Request URL:', url);
+
+        const response = await api.post(url);
         return response.data;
     } catch (error) {
         console.error(`Error adding chat ${chatId} to organization ${organizationId}:`, error);
@@ -60,9 +70,23 @@ export const addChatToOrganization = async (organizationId, chatId) => {
     }
 };
 
+export const testOrganizationApi = async () => {
+    try {
+        const response = await api.post('/organizations/test');
+        console.log('Test response:', response.data);
+        return response.data;
+    } catch (error) {
+        console.error('Test error:', error);
+        throw error;
+    }
+};
+
 export const removeChatFromOrganization = async (organizationId, chatId) => {
     try {
-        const response = await api.delete(`/organizations/${organizationId}/chats/${chatId}`);
+        // Encode the chatId to handle special characters
+        const encodedChatId = encodeURIComponent(chatId);
+
+        const response = await api.delete(`/organizations/${organizationId}/chats/${encodedChatId}`);
         return response.data;
     } catch (error) {
         console.error(`Error removing chat ${chatId} from organization ${organizationId}:`, error);
