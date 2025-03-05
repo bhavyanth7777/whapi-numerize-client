@@ -5,7 +5,7 @@ import {
     deleteOrganization
 } from '../../services/organizationService';
 
-const OrganizationList = ({ onSelectOrganization }) => {
+const OrganizationList = ({ onSelectOrganization, refreshCounter = 0 }) => {
     const [organizations, setOrganizations] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -15,7 +15,7 @@ const OrganizationList = ({ onSelectOrganization }) => {
 
     useEffect(() => {
         fetchOrganizations();
-    }, []);
+    }, [refreshCounter]); // Re-fetch when refreshCounter changes
 
     const fetchOrganizations = async () => {
         try {

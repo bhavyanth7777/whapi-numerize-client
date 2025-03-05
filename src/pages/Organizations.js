@@ -1,9 +1,11 @@
+// client/src/pages/Organizations.js
 import React, { useState } from 'react';
 import OrganizationList from '../components/OrganizationPanel/OrganizationList';
 import OrganizationDetails from '../components/OrganizationPanel/OrganizationDetails';
 
 const Organizations = () => {
     const [selectedOrganization, setSelectedOrganization] = useState(null);
+    const [refresh, setRefresh] = useState(0); // Add a refresh counter
 
     const handleSelectOrganization = (organization) => {
         setSelectedOrganization(organization);
@@ -11,10 +13,15 @@ const Organizations = () => {
 
     const handleBack = () => {
         setSelectedOrganization(null);
+        // Trigger refresh of the organization list
+        setRefresh(prev => prev + 1);
     };
 
     const handleUpdate = (updatedOrg) => {
-        // You might want to refresh the organization list here
+        // Update the selected organization with the updated data
+        setSelectedOrganization(updatedOrg);
+        // Trigger refresh of the organization list
+        setRefresh(prev => prev + 1);
     };
 
     return (
@@ -30,7 +37,10 @@ const Organizations = () => {
                             onUpdate={handleUpdate}
                         />
                     ) : (
-                        <OrganizationList onSelectOrganization={handleSelectOrganization} />
+                        <OrganizationList
+                            onSelectOrganization={handleSelectOrganization}
+                            refreshCounter={refresh} // Pass the refresh counter
+                        />
                     )}
                 </div>
 
