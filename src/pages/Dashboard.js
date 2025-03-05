@@ -1,41 +1,17 @@
 // client/src/pages/Dashboard.js
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { getSystemInfo } from '../services/systemService';
+import { useSystem } from '../contexts/SystemContext';
 
 const Dashboard = () => {
-    const [systemInfo, setSystemInfo] = useState({
-        whatsappAccount: '',
-        profileIcon: null,
-        whapiStatus: '',
-        documentAIStatus: '',
-        lastSync: null,
-        stats: {
-            chats: 0,
-            groups: 0,
-            documents: 0
-        }
-    });
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const { systemInfo, loading, error, fetchSystemInfo, lastFetched } = useSystem();
 
     useEffect(() => {
-        const fetchSystemInfo = async () => {
-            try {
-                setLoading(true);
-                const data = await getSystemInfo();
-                setSystemInfo(data);
-                setError(null);
-            } catch (err) {
-                console.error('Error fetching system info:', err);
-                setError('Failed to load system information');
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchSystemInfo();
-    }, []);
+        // Only fetch if we don't already have the data
+        if (!systemInfo) {
+            fetchSystemInfo();
+        }
+    }, [systemInfo, fetchSystemInfo]);
 
     // Format the last sync time
     const formatLastSync = (lastSync) => {
@@ -49,15 +25,21 @@ const Dashboard = () => {
         }
     };
 
+    // Format the last fetched time
+    const formatLastFetched = () => {
+        if (!lastFetched) return 'Never';
+        return lastFetched.toLocaleString();
+    };
+
     return (
         <div className="container mx-auto p-4">
             <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
 
-            {loading ? (
+            {loading && !systemInfo ? (
                 <div className="text-center">Loading system information...</div>
             ) : error ? (
                 <div className="text-center text-red-500">{error}</div>
-            ) : (
+            ) : systemInfo && (
                 <>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                         <div className="bg-white p-4 rounded-lg shadow">
@@ -150,17 +132,26 @@ const Dashboard = () => {
                                 <div className="flex justify-between border-b pb-2">
                                     <span className="text-gray-600">Whapi.cloud Status:</span>
                                     <span className={`font-medium ${systemInfo.whapiStatus === 'Active' ? 'text-green-500' : 'text-red-500'}`}>
-                    {systemInfo.whapiStatus}
-                  </span>
+                                        {systemInfo.whapiStatus}
+                                    </span>
                                 </div>
                                 <div className="flex justify-between border-b pb-2">
                                     <span className="text-gray-600">Document AI:</span>
                                     <span className="font-medium">{systemInfo.documentAIStatus}</span>
                                 </div>
-                                <div className="flex justify-between">
+                                <div className="flex justify-between border-b pb-2">
                                     <span className="text-gray-600">Last Sync:</span>
                                     <span className="font-medium">{formatLastSync(systemInfo.lastSync)}</span>
                                 </div>
+                                <div className="flex justify-between border-b pb-2">
+                                    <span className="text-gray-600">Data Last Fetched:</span>
+                                    <span className="font-medium">{formatLastFetched()}</span>
+                                </div>
+                                {loading && (
+                                    <div className="flex justify-center text-blue-500 text-sm pt-2">
+                                        Refreshing data...
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
