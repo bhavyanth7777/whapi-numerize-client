@@ -1,6 +1,6 @@
-// client/src/contexts/SystemContext.js
+// src/contexts/SystemContext.js
 import React, { createContext, useContext, useState } from 'react';
-import { getSystemInfo, updateSystemInfo } from '../services/systemService';
+import api from '../services/api';
 
 const SystemContext = createContext(null);
 
@@ -19,7 +19,7 @@ export const SystemProvider = ({ children }) => {
         try {
             setLoading(true);
             setError(null);
-            const data = await getSystemInfo();
+            const { data } = await api.get('/system/info');
             setSystemInfo(data);
             setLastFetched(new Date());
             return data;
@@ -36,7 +36,7 @@ export const SystemProvider = ({ children }) => {
         try {
             setLoading(true);
             setError(null);
-            const data = await updateSystemInfo();
+            const { data } = await api.post('/system/info/update');
             setSystemInfo(data);
             setLastFetched(new Date());
             return data;

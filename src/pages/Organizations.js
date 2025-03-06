@@ -1,3 +1,4 @@
+// src/pages/Organizations.js
 import React, { useState } from 'react';
 import OrganizationList from '../components/OrganizationPanel/OrganizationList';
 import OrganizationDetails from '../components/OrganizationPanel/OrganizationDetails';

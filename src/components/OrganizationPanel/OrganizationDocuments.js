@@ -1,7 +1,6 @@
 // src/components/OrganizationPanel/OrganizationDocuments.js
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
-import whapiService from '../../services/whapiService';
 
 const OrganizationDocuments = ({ organization }) => {
     const [mediaItems, setMediaItems] = useState([]);
@@ -9,119 +8,92 @@ const OrganizationDocuments = ({ organization }) => {
     const [error, setError] = useState(null);
     const [selectedChat, setSelectedChat] = useState('all');
     const [mediaType, setMediaType] = useState('all');
-    const [chats, setChats] = useState([]);
 
     useEffect(() => {
-        if (organization && organization.chatIds && organization.chatIds.length > 0) {
-            fetchMediaForAllChats();
+        if (organization?.chatIds?.length > 0) {
+            fetchMediaItems();
         }
     }, [organization]);
 
-    // Modified to handle errors gracefully
-    const fetchMediaForAllChats = async () => {
+    const fetchMediaItems = async () => {
+        if (!organization || !organization.chatIds || organization.chatIds.length === 0) {
+            return;
+        }
+
         setLoading(true);
         setError(null);
 
         try {
-            let allMedia = [];
-            let chatInfoMap = {};
+            const allMedia = [];
 
+            // Fetch messages for each chat ID in the organization
             for (const chatId of organization.chatIds) {
                 try {
-                    // First, try to get chat info for display purposes
-                    // Store chat name even if we can't get full chat info
-                    chatInfoMap[chatId] = {
-                        chatId: chatId,
-                        name: chatId.includes('@g.us') ? `Group ${chatId.split('@')[0]}` : chatId
-                    };
+                    const { data } = await api.get(`/messages/${encodeURIComponent(chatId)}`);
+                    const messages = data.messages || [];
 
-                    try {
-                        // Try to get official chat info but don't fail if not available
-                        const chatResponse = await api.get(`/chats/${encodeURIComponent(chatId)}`);
-                        if (chatResponse && chatResponse.data) {
-                            chatInfoMap[chatId] = chatResponse.data;
+                    // Filter messages to include only images and documents
+                    const mediaMessages = messages.filter(msg =>
+                        msg.type === 'image' || msg.type === 'document'
+                    );
+
+                    // Extract and format media data
+                    for (const msg of mediaMessages) {
+                        const chatName = chatId.includes('@g.us')
+                            ? `Group ${chatId.split('@')[0]}`
+                            : `Chat ${chatId.split('@')[0]}`;
+
+                        if (msg.type === 'image' && msg.image) {
+                            allMedia.push({
+                                id: msg.id,
+                                chatId: chatId,
+                                chatName: chatName,
+                                type: 'image',
+                                fileName: msg.image.caption || 'Unnamed',
+                                fileUrl: msg.image.link,
+                                preview: msg.image.preview,
+                                fileSize: msg.image.file_size,
+                                timestamp: msg.timestamp
+                            });
+                        } else if (msg.type === 'document' && msg.document) {
+                            allMedia.push({
+                                id: msg.id,
+                                chatId: chatId,
+                                chatName: chatName,
+                                type: 'document',
+                                fileName: msg.document.file_name || msg.document.caption || 'Unnamed',
+                                fileUrl: msg.document.link,
+                                fileSize: msg.document.file_size,
+                                pageCount: msg.document.page_count,
+                                timestamp: msg.timestamp
+                            });
                         }
-                    } catch (chatInfoError) {
-                        console.warn(`Could not fetch chat info for ${chatId}, using fallback name`);
                     }
-
-                    // Now get messages - this should work for both chats and groups
-                    const messages = await fetchChatMessages(chatId);
-
-                    if (messages && messages.length > 0) {
-                        const media = extractMediaFromMessages(messages, chatId);
-                        allMedia = [...allMedia, ...media];
-                    }
-                } catch (chatError) {
-                    console.error(`Error processing chat ${chatId}:`, chatError);
+                } catch (error) {
+                    console.error(`Error fetching messages for chat ${chatId}:`, error);
                     // Continue with other chats even if one fails
                 }
             }
 
-            setMediaItems(allMedia);
-            setChats(Object.values(chatInfoMap));
-        } catch (err) {
-            console.error('Error fetching media:', err);
-            setError('Failed to load media items');
+            // Remove duplicates (same file name and size)
+            const uniqueMediaMap = new Map();
+            allMedia.forEach(item => {
+                const key = `${item.fileName}-${item.fileSize}`;
+                if (!uniqueMediaMap.has(key)) {
+                    uniqueMediaMap.set(key, item);
+                }
+            });
+
+            setMediaItems(Array.from(uniqueMediaMap.values()));
+        } catch (error) {
+            console.error('Error fetching media items:', error);
+            setError('Failed to load media items. Please try again.');
         } finally {
             setLoading(false);
         }
     };
 
-    const fetchChatMessages = async (chatId) => {
-        try {
-            // Direct Whapi API call to get messages
-            const response = await api.get(`/messages/list/${encodeURIComponent(chatId)}?count=100`);
-
-            // Check different possible response formats
-            if (response.data && Array.isArray(response.data.messages)) {
-                return response.data.messages;
-            } else if (Array.isArray(response.data)) {
-                return response.data;
-            }
-
-            return [];
-        } catch (error) {
-            console.error(`Error fetching messages for chat ${chatId}:`, error);
-            // Use mock data if available in development
-            if (process.env.NODE_ENV === 'development') {
-                console.warn(`Using mock data for chat ${chatId}`);
-                const mockData = whapiService.getMockMediaMessages();
-                return mockData.messages || [];
-            }
-            return [];
-        }
-    };
-
-    const extractMediaFromMessages = (messages, chatId) => {
-        if (!Array.isArray(messages)) return [];
-
-        return messages.filter(msg =>
-            msg.type === 'image' || msg.type === 'document'
-        ).map(msg => {
-            const isImage = msg.type === 'image';
-            const mediaData = isImage ? msg.image : msg.document;
-
-            if (!mediaData) return null;
-
-            return {
-                id: msg.id,
-                chatId: chatId,
-                type: msg.type,
-                timestamp: msg.timestamp,
-                fileUrl: mediaData.link || null,
-                fileName: mediaData.file_name || mediaData.caption || 'Unnamed',
-                preview: isImage ? mediaData.preview || null : null,
-                fileSize: mediaData.file_size || 0,
-                mimeType: mediaData.mime_type || '',
-                sender: msg.from_name || msg.from || 'Unknown',
-                width: isImage ? mediaData.width : null,
-                height: isImage ? mediaData.height : null,
-                pageCount: !isImage && mediaData.page_count ? mediaData.page_count : null
-            };
-        }).filter(item => item !== null);
-    };
-
+    // Get filtered items based on selected chat and media type
     const getFilteredItems = () => {
         return mediaItems.filter(item => {
             const chatMatches = selectedChat === 'all' || item.chatId === selectedChat;
@@ -130,52 +102,33 @@ const OrganizationDocuments = ({ organization }) => {
         });
     };
 
-    const getChatName = (chatId) => {
-        const chat = chats.find(c => c.chatId === chatId);
-        if (chat && chat.name) {
-            return chat.name;
-        }
-
-        // Fallback to formatted chat ID if no name is available
-        return chatId.includes('@g.us')
-            ? `Group ${chatId.split('@')[0]}`
-            : chatId;
-    };
-
+    // Format file size for display
     const formatFileSize = (bytes) => {
-        if (!bytes || bytes === 0) return 'Unknown size';
-        if (bytes < 1024) return bytes + ' B';
-        else if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
-        else return (bytes/(1024*1024)).toFixed(1) + ' MB';
+        if (!bytes) return '';
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
     };
 
+    // Format date for display
     const formatDate = (timestamp) => {
-        if (!timestamp) return 'Unknown date';
-        try {
-            return new Date(timestamp * 1000).toLocaleDateString();
-        } catch (e) {
-            return 'Invalid date';
-        }
+        if (!timestamp) return '';
+        const date = new Date(timestamp * 1000);
+        return `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
     };
 
-    // Get unique chat IDs for the filter dropdown
+    // Get unique chats for the filter dropdown
     const uniqueChats = Array.from(new Set(mediaItems.map(item => item.chatId)));
-    const filteredItems = getFilteredItems();
 
-    const getDocumentIcon = (mimeType) => {
-        if (!mimeType) return '📁';
-        if (mimeType.includes('pdf')) return '📄';
-        if (mimeType.includes('word') || mimeType.includes('msword')) return '📝';
-        if (mimeType.includes('excel') || mimeType.includes('spreadsheet')) return '📊';
-        return '📁';
-    };
+    // Get filtered items
+    const filteredItems = getFilteredItems();
 
     return (
         <div className="bg-white rounded-lg shadow">
             <div className="p-4 border-b">
                 <h2 className="text-xl font-semibold">Images & Documents</h2>
 
-                <div className="mt-3 flex flex-wrap gap-3">
+                <div className="mt-3 flex space-x-4">
                     <div className="w-full sm:w-48">
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                             Chat
@@ -188,7 +141,7 @@ const OrganizationDocuments = ({ organization }) => {
                             <option value="all">All Chats</option>
                             {uniqueChats.map((chatId) => (
                                 <option key={chatId} value={chatId}>
-                                    {getChatName(chatId)}
+                                    {mediaItems.find(item => item.chatId === chatId)?.chatName || chatId}
                                 </option>
                             ))}
                         </select>
@@ -222,7 +175,7 @@ const OrganizationDocuments = ({ organization }) => {
                             No media items found for the selected filters
                         </div>
                     ) : (
-                        <div className="grid grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                             {filteredItems.map((item) => (
                                 <div key={item.id} className="border rounded-lg overflow-hidden">
                                     {item.type === 'image' && (
@@ -230,12 +183,6 @@ const OrganizationDocuments = ({ organization }) => {
                                             {item.preview ? (
                                                 <img
                                                     src={item.preview}
-                                                    alt={item.fileName}
-                                                    className="w-full h-full object-contain"
-                                                />
-                                            ) : item.fileUrl ? (
-                                                <img
-                                                    src={item.fileUrl}
                                                     alt={item.fileName}
                                                     className="w-full h-full object-contain"
                                                 />
@@ -250,7 +197,7 @@ const OrganizationDocuments = ({ organization }) => {
                                     {item.type === 'document' && (
                                         <div className="h-48 bg-gray-50 flex items-center justify-center">
                                             <div className="text-center">
-                                                <div className="text-4xl mb-2">{getDocumentIcon(item.mimeType)}</div>
+                                                <div className="text-4xl mb-2">📄</div>
                                                 <div className="text-sm font-medium truncate px-4">
                                                     {item.fileName}
                                                 </div>
@@ -264,7 +211,7 @@ const OrganizationDocuments = ({ organization }) => {
                                     <div className="p-2 border-t">
                                         <div className="font-medium truncate text-sm">{item.fileName}</div>
                                         <div className="text-xs text-gray-500">
-                                            {getChatName(item.chatId)}
+                                            {item.chatName}
                                         </div>
                                         <div className="text-xs text-gray-400 flex justify-between mt-1">
                                             <span>{formatDate(item.timestamp)}</span>
@@ -275,7 +222,7 @@ const OrganizationDocuments = ({ organization }) => {
                                                 href={item.fileUrl}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="mt-2 block text-center text-xs bg-blue-500 text-white py-1 px-2 rounded hover:bg-blue-600"
+                                                className="mt-2 block text-center text-sm bg-blue-500 text-white py-1 px-2 rounded hover:bg-blue-600"
                                             >
                                                 View Original
                                             </a>

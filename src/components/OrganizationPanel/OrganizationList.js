@@ -1,9 +1,6 @@
+// src/components/OrganizationPanel/OrganizationList.js
 import React, { useState, useEffect } from 'react';
-import {
-    getAllOrganizations,
-    createOrganization,
-    deleteOrganization
-} from '../../services/organizationService';
+import api from '../../services/api';
 
 const OrganizationList = ({ onSelectOrganization, refreshCounter = 0 }) => {
     const [organizations, setOrganizations] = useState([]);
@@ -20,7 +17,7 @@ const OrganizationList = ({ onSelectOrganization, refreshCounter = 0 }) => {
     const fetchOrganizations = async () => {
         try {
             setLoading(true);
-            const data = await getAllOrganizations();
+            const { data } = await api.get('/organizations');
             setOrganizations(data);
             setError(null);
         } catch (err) {
@@ -39,7 +36,7 @@ const OrganizationList = ({ onSelectOrganization, refreshCounter = 0 }) => {
         }
 
         try {
-            const newOrg = await createOrganization({
+            const { data: newOrg } = await api.post('/organizations', {
                 name: newOrgName,
                 description: newOrgDescription
             });
@@ -60,7 +57,7 @@ const OrganizationList = ({ onSelectOrganization, refreshCounter = 0 }) => {
         }
 
         try {
-            await deleteOrganization(id);
+            await api.delete(`/organizations/${id}`);
             setOrganizations(organizations.filter(org => org._id !== id));
         } catch (err) {
             setError('Failed to delete organization. Please try again.');
@@ -136,7 +133,7 @@ const OrganizationList = ({ onSelectOrganization, refreshCounter = 0 }) => {
                                             <p className="text-sm text-gray-500 mt-1">{org.description}</p>
                                         )}
                                         <p className="text-xs text-gray-400 mt-1">
-                                            {org.chats.length} chats assigned
+                                            {org.chatIds ? org.chatIds.length : 0} chats assigned
                                         </p>
                                     </div>
                                     <button

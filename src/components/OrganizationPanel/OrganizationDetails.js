@@ -1,11 +1,6 @@
+// src/components/OrganizationPanel/OrganizationDetails.js
 import React, { useState, useEffect } from 'react';
-import {
-    getOrganizationById,
-    updateOrganization,
-    removeChatFromOrganization,
-    addChatToOrganization
-} from '../../services/organizationService';
-import { getAllChats, getIndividualChats, getGroupsOnly } from '../../services/chatService';
+import api from '../../services/api';
 import OrganizationDocuments from './OrganizationDocuments';
 
 const OrganizationDetails = ({ organization, onBack, onUpdate }) => {
@@ -30,15 +25,15 @@ const OrganizationDetails = ({ organization, onBack, onUpdate }) => {
     const fetchData = async () => {
         try {
             // Get organization details
-            const orgData = await getOrganizationById(organization._id);
+            const { data: orgData } = await api.get(`/organizations/${organization._id}`);
             setOrg(orgData);
             setName(orgData.name);
             setDescription(orgData.description || '');
 
             // Get all chats and groups
-            const [individualChats, groups] = await Promise.all([
-                getIndividualChats(),
-                getGroupsOnly()
+            const [{ data: individualChats }, { data: groups }] = await Promise.all([
+                api.get('/chats/individual'),
+                api.get('/chats/groups')
             ]);
 
             // Combine and add type indicator
@@ -71,7 +66,7 @@ const OrganizationDetails = ({ organization, onBack, onUpdate }) => {
         e.preventDefault();
 
         try {
-            const updatedOrg = await updateOrganization(org._id, {
+            const { data: updatedOrg } = await api.put(`/organizations/${org._id}`, {
                 name,
                 description
             });
@@ -91,7 +86,7 @@ const OrganizationDetails = ({ organization, onBack, onUpdate }) => {
 
     const handleRemoveChat = async (chatId) => {
         try {
-            await removeChatFromOrganization(org._id, chatId);
+            await api.delete(`/organizations/${org._id}/chats/${encodeURIComponent(chatId)}`);
 
             // Update local state
             const removedChat = assignedChats.find(chat => chat.chatId === chatId);
@@ -114,7 +109,7 @@ const OrganizationDetails = ({ organization, onBack, onUpdate }) => {
 
             // Process all selected chats
             const promises = selectedChats.map(chatId =>
-                addChatToOrganization(org._id, chatId)
+                api.post(`/organizations/${org._id}/chats/${encodeURIComponent(chatId)}`)
             );
 
             await Promise.all(promises);
@@ -376,6 +371,7 @@ const OrganizationDetails = ({ organization, onBack, onUpdate }) => {
                 </div>
             </div>
 
+            {/* Organization Documents Component */}
             <OrganizationDocuments organization={org} />
         </div>
     );

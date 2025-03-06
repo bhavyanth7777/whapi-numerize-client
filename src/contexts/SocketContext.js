@@ -1,5 +1,6 @@
+// src/contexts/SocketContext.js
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import io from 'socket.io-client';
+import { io } from 'socket.io-client';
 
 const SocketContext = createContext(null);
 
@@ -8,7 +9,8 @@ export const SocketProvider = ({ children }) => {
     const [isConnected, setIsConnected] = useState(false);
 
     useEffect(() => {
-        const socketInstance = io(process.env.REACT_APP_SOCKET_URL);
+        const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || 'http://localhost:8000';
+        const socketInstance = io(SOCKET_URL);
 
         socketInstance.on('connect', () => {
             setIsConnected(true);
