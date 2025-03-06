@@ -1,4 +1,3 @@
-// client/src/pages/Organizations.js
 import React, { useState } from 'react';
 import OrganizationList from '../components/OrganizationPanel/OrganizationList';
 import OrganizationDetails from '../components/OrganizationPanel/OrganizationDetails';
@@ -28,23 +27,21 @@ const Organizations = () => {
         <div className="container mx-auto p-4">
             <h1 className="text-2xl font-bold mb-6">Organizations</h1>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div>
-                    {selectedOrganization ? (
-                        <OrganizationDetails
-                            organization={selectedOrganization}
-                            onBack={handleBack}
-                            onUpdate={handleUpdate}
-                        />
-                    ) : (
+            {selectedOrganization ? (
+                <OrganizationDetails
+                    organization={selectedOrganization}
+                    onBack={handleBack}
+                    onUpdate={handleUpdate}
+                />
+            ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div>
                         <OrganizationList
                             onSelectOrganization={handleSelectOrganization}
-                            refreshCounter={refresh} // Pass the refresh counter
+                            refreshCounter={refresh}
                         />
-                    )}
-                </div>
+                    </div>
 
-                {!selectedOrganization && (
                     <div className="bg-white rounded-lg shadow p-8 text-center">
                         <div className="text-4xl mb-3">🏢</div>
                         <h3 className="text-xl font-medium mb-2">Manage Organizations</h3>
@@ -57,12 +54,13 @@ const Organizations = () => {
                                 <li>Group related chats together</li>
                                 <li>Easily manage multiple client conversations</li>
                                 <li>Organize by department, project, or client</li>
+                                <li>Access all media and documents in one place</li>
                                 <li>Streamline team communication</li>
                             </ul>
                         </div>
                     </div>
-                )}
-            </div>
+                </div>
+            )}
         </div>
     );
 };
