@@ -2,18 +2,24 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 
-const OrganizationDocuments = ({ organization }) => {
+const OrganizationDocuments = ({ organization, assignedChats = [] }) => {
     const [mediaItems, setMediaItems] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [selectedChat, setSelectedChat] = useState('all');
     const [mediaType, setMediaType] = useState('all');
 
+    // Create a mapping of chat IDs to chat names
+    const chatNameMap = {};
+    assignedChats.forEach(chat => {
+        chatNameMap[chat.chatId] = chat.name;
+    });
+
     useEffect(() => {
         if (organization?.chatIds?.length > 0) {
             fetchMediaItems();
         }
-    }, [organization]);
+    }, [organization, assignedChats]);
 
     const fetchMediaItems = async () => {
         if (!organization || !organization.chatIds || organization.chatIds.length === 0) {
@@ -32,6 +38,10 @@ const OrganizationDocuments = ({ organization }) => {
                     const { data } = await api.get(`/messages/${encodeURIComponent(chatId)}`);
                     const messages = data.messages || [];
 
+                    // Get the proper chat name from the mapping or fallback to a formatted version
+                    const chatName = chatNameMap[chatId] ||
+                        (chatId.includes('@g.us') ? `Group ${chatId.split('@')[0]}` : `Chat ${chatId.split('@')[0]}`);
+
                     // Filter messages to include only images and documents
                     const mediaMessages = messages.filter(msg =>
                         msg.type === 'image' || msg.type === 'document'
@@ -39,10 +49,6 @@ const OrganizationDocuments = ({ organization }) => {
 
                     // Extract and format media data
                     for (const msg of mediaMessages) {
-                        const chatName = chatId.includes('@g.us')
-                            ? `Group ${chatId.split('@')[0]}`
-                            : `Chat ${chatId.split('@')[0]}`;
-
                         if (msg.type === 'image' && msg.image) {
                             allMedia.push({
                                 id: msg.id,
@@ -117,8 +123,19 @@ const OrganizationDocuments = ({ organization }) => {
         return `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
     };
 
-    // Get unique chats for the filter dropdown
-    const uniqueChats = Array.from(new Set(mediaItems.map(item => item.chatId)));
+    // Get unique chats for the filter dropdown (with proper names)
+    const uniqueChatsWithNames = [];
+    const addedChatIds = new Set();
+
+    mediaItems.forEach(item => {
+        if (!addedChatIds.has(item.chatId)) {
+            uniqueChatsWithNames.push({
+                id: item.chatId,
+                name: item.chatName
+            });
+            addedChatIds.add(item.chatId);
+        }
+    });
 
     // Get filtered items
     const filteredItems = getFilteredItems();
@@ -139,9 +156,9 @@ const OrganizationDocuments = ({ organization }) => {
                             onChange={(e) => setSelectedChat(e.target.value)}
                         >
                             <option value="all">All Chats</option>
-                            {uniqueChats.map((chatId) => (
-                                <option key={chatId} value={chatId}>
-                                    {mediaItems.find(item => item.chatId === chatId)?.chatName || chatId}
+                            {uniqueChatsWithNames.map((chat) => (
+                                <option key={chat.id} value={chat.id}>
+                                    {chat.name}
                                 </option>
                             ))}
                         </select>

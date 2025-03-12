@@ -371,8 +371,11 @@ const OrganizationDetails = ({ organization, onBack, onUpdate }) => {
                 </div>
             </div>
 
-            {/* Organization Documents Component */}
-            <OrganizationDocuments organization={org} />
+            {/* Organization Documents Component - Pass the assignedChats */}
+            <OrganizationDocuments
+                organization={org}
+                assignedChats={assignedChats}
+            />
         </div>
     );
 };
