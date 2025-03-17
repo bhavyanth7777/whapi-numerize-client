@@ -56,7 +56,7 @@ const OrganizationDocuments = ({ organization, assignedChats = [] }) => {
                                 chatName: chatName,
                                 type: 'image',
                                 fileName: msg.image.caption || 'Unnamed',
-                                fileUrl: msg.image.link,
+                                fileId: msg.image.id,
                                 preview: msg.image.preview,
                                 fileSize: msg.image.file_size,
                                 timestamp: msg.timestamp
@@ -68,7 +68,7 @@ const OrganizationDocuments = ({ organization, assignedChats = [] }) => {
                                 chatName: chatName,
                                 type: 'document',
                                 fileName: msg.document.file_name || msg.document.caption || 'Unnamed',
-                                fileUrl: msg.document.link,
+                                fileId: msg.document.id,
                                 fileSize: msg.document.file_size,
                                 pageCount: msg.document.page_count,
                                 timestamp: msg.timestamp
