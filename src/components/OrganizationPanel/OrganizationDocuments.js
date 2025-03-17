@@ -1,6 +1,7 @@
 // src/components/OrganizationPanel/OrganizationDocuments.js
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
+import MediaModal from './MediaModal';
 
 const OrganizationDocuments = ({ organization, assignedChats = [] }) => {
     const [mediaItems, setMediaItems] = useState([]);
@@ -8,6 +9,7 @@ const OrganizationDocuments = ({ organization, assignedChats = [] }) => {
     const [error, setError] = useState(null);
     const [selectedChat, setSelectedChat] = useState('all');
     const [mediaType, setMediaType] = useState('all');
+    const [selectedMedia, setSelectedMedia] = useState(null);
 
     // Create a mapping of chat IDs to chat names
     const chatNameMap = {};
@@ -123,6 +125,16 @@ const OrganizationDocuments = ({ organization, assignedChats = [] }) => {
         return `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
     };
 
+    // Handle clicking on a media item
+    const handleMediaClick = (item) => {
+        setSelectedMedia(item);
+    };
+
+    // Close the media modal
+    const handleCloseModal = () => {
+        setSelectedMedia(null);
+    };
+
     // Get unique chats for the filter dropdown (with proper names)
     const uniqueChatsWithNames = [];
     const addedChatIds = new Set();
@@ -194,7 +206,11 @@ const OrganizationDocuments = ({ organization, assignedChats = [] }) => {
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                             {filteredItems.map((item) => (
-                                <div key={item.id} className="border rounded-lg overflow-hidden">
+                                <div
+                                    key={item.id}
+                                    className="border rounded-lg overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
+                                    onClick={() => handleMediaClick(item)}
+                                >
                                     {item.type === 'image' && (
                                         <div className="h-48 overflow-hidden bg-gray-100 flex items-center justify-center">
                                             {item.preview ? (
@@ -234,22 +250,20 @@ const OrganizationDocuments = ({ organization, assignedChats = [] }) => {
                                             <span>{formatDate(item.timestamp)}</span>
                                             <span>{formatFileSize(item.fileSize)}</span>
                                         </div>
-                                        {item.fileUrl && (
-                                            <a
-                                                href={item.fileUrl}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="mt-2 block text-center text-sm bg-blue-500 text-white py-1 px-2 rounded hover:bg-blue-600"
-                                            >
-                                                View Original
-                                            </a>
-                                        )}
                                     </div>
                                 </div>
                             ))}
                         </div>
                     )}
                 </div>
+            )}
+
+            {/* Media Modal */}
+            {selectedMedia && (
+                <MediaModal
+                    mediaItem={selectedMedia}
+                    onClose={handleCloseModal}
+                />
             )}
         </div>
     );
