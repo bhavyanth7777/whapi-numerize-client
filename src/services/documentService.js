@@ -39,3 +39,13 @@ export const processDocument = async (messageId) => {
         throw error;
     }
 };
+
+export const analyzeDocument = async (fileId) => {
+    try {
+        const response = await api.post(`/documents/analyze/${fileId}`);
+        return response.data;
+    } catch (error) {
+        console.error(`Error analyzing document with fileId ${fileId}:`, error);
+        throw error;
+    }
+};

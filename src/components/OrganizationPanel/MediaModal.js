@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
+import { analyzeDocument } from '../../services/documentService';
 
 const MediaModal = ({ mediaItem, onClose }) => {
     const [loading, setLoading] = useState(true);
     const [media, setMedia] = useState(null);
     const [error, setError] = useState(null);
+    const [parsedData, setParsedData] = useState(null);
+    const [analyzing, setAnalyzing] = useState(false);
+    const [analyzeError, setAnalyzeError] = useState(null);
 
     useEffect(() => {
         const fetchMedia = async () => {
@@ -74,6 +78,23 @@ const MediaModal = ({ mediaItem, onClose }) => {
         }
     };
 
+    const handleAnalyzeDocument = async () => {
+        if (!mediaItem || !mediaItem.fileId) return;
+        
+        try {
+            setAnalyzing(true);
+            setAnalyzeError(null);
+            
+            const result = await analyzeDocument(mediaItem.fileId);
+            setParsedData(result);
+        } catch (err) {
+            console.error('Error analyzing document:', err);
+            setAnalyzeError('Failed to analyze document');
+        } finally {
+            setAnalyzing(false);
+        }
+    };
+
     // Render media content based on type
     const renderMedia = () => {
         if (!media) return null;
@@ -116,6 +137,46 @@ const MediaModal = ({ mediaItem, onClose }) => {
         }
     };
 
+    // Render parsed data
+    const renderParsedData = () => {
+        if (!parsedData) return null;
+
+        return (
+            <div className="p-4 bg-gray-50 rounded-lg border mt-4">
+                <h3 className="text-lg font-medium mb-2">Document AI Analysis</h3>
+                
+                {Object.keys(parsedData.parsedData).length > 0 ? (
+                    <div className="overflow-auto max-h-[50vh]">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="bg-gray-100">
+                                    <th className="text-left p-2 border-b">Field</th>
+                                    <th className="text-left p-2 border-b">Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {Object.entries(parsedData.parsedData).map(([key, value]) => (
+                                    <tr key={key} className="border-b">
+                                        <td className="p-2 font-medium">{key}</td>
+                                        <td className="p-2">{value}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                ) : (
+                    <p className="text-gray-500">No data could be extracted from this document.</p>
+                )}
+                
+                {parsedData.confidence !== null && (
+                    <p className="text-sm text-gray-500 mt-2">
+                        Confidence score: {(parsedData.confidence * 100).toFixed(2)}%
+                    </p>
+                )}
+            </div>
+        );
+    };
+
     if (!mediaItem) return null;
 
     return (
@@ -141,7 +202,40 @@ const MediaModal = ({ mediaItem, onClose }) => {
                             {error}
                         </div>
                     ) : (
-                        renderMedia()
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                {renderMedia()}
+                            </div>
+                            <div>
+                                {parsedData ? (
+                                    renderParsedData()
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center h-full">
+                                        {analyzing ? (
+                                            <div className="text-center">
+                                                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500 mb-4"></div>
+                                                <p>Analyzing document...</p>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                {analyzeError && (
+                                                    <p className="text-red-500 mb-4">{analyzeError}</p>
+                                                )}
+                                                <button
+                                                    onClick={handleAnalyzeDocument}
+                                                    className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                                                >
+                                                    Analyze with Document AI
+                                                </button>
+                                                <p className="text-sm text-gray-500 mt-4 text-center">
+                                                    Click to extract information from this document using Google Document AI
+                                                </p>
+                                            </>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     )}
                 </div>
 
